@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
@@ -25,6 +26,21 @@ func ChainMiddleware(handler http.Handler, middlewares ...Middleware) http.Handl
 	return handler
 }
 
+// ContextKey is a custom type to avoid context key collisions
+type ContextKey string
+
+const (
+	RequestIDKey ContextKey = "requestID"
+)
+
+// ContextMiddleware adds a value to the request context
+func ContextMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), RequestIDKey, "12345") // Example value
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
 func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Hello, World!")
 }
@@ -36,7 +52,7 @@ func main() {
 	// Apply multiple middlewares using ChainMiddleware
 	middlewares := []Middleware{
 		LoggingMiddleware,
-		// Add more middleware here
+		ContextMiddleware, // Add the new context middleware here
 	}
 	wrappedMux := ChainMiddleware(mux, middlewares...)
 
